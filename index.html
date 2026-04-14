@@ -1,0 +1,502 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-background-tertiary);color:var(--color-text-primary)}
+.app{display:flex;flex-direction:column;min-height:100vh;padding:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);position:sticky;top:0;z-index:100}
+.topbar-title{font-size:15px;font-weight:500;letter-spacing:-.2px}
+.topbar-tabs{display:flex;gap:4px}
+.tab{padding:6px 14px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;border:0.5px solid transparent;background:transparent;color:var(--color-text-secondary);transition:all .15s}
+.tab.active{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-tertiary)}
+.tab:hover:not(.active){color:var(--color-text-primary)}
+.add-btn{padding:6px 14px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;border:0.5px solid var(--color-border-secondary);background:var(--color-text-primary);color:var(--color-background-primary)}
+.panel{display:none;padding:20px}
+.panel.active{display:block}
+
+/* CALENDAR */
+.cal-header{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.cal-nav{background:transparent;border:0.5px solid var(--color-border-tertiary);padding:4px 10px;border-radius:var(--border-radius-md);cursor:pointer;font-size:13px;color:var(--color-text-primary)}
+.cal-month{font-size:15px;font-weight:500;min-width:120px}
+.cal-grid{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.cal-days-header{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:0.5px solid var(--color-border-tertiary)}
+.cal-day-name{text-align:center;padding:8px 4px;font-size:11px;color:var(--color-text-secondary);letter-spacing:.5px}
+.cal-body{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-cell{min-height:80px;padding:6px;border-right:0.5px solid var(--color-border-tertiary);border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background .1s}
+.cal-cell:hover{background:var(--color-background-secondary)}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell.other-month .cal-date{color:var(--color-text-tertiary)}
+.cal-cell.today .cal-date{background:var(--color-text-primary);color:var(--color-background-primary);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-date{font-size:12px;font-weight:500;margin-bottom:4px}
+.cal-event{font-size:10px;padding:2px 5px;border-radius:4px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+
+/* KANBAN */
+.kanban{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{min-width:200px;flex:1;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px;max-height:70vh;overflow-y:auto}
+.kanban-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.kanban-col-title{font-size:12px;font-weight:500;letter-spacing:.3px}
+.kanban-count{font-size:11px;color:var(--color-text-secondary);background:var(--color-background-secondary);padding:2px 7px;border-radius:20px}
+.kanban-card{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.kanban-card:hover{border-color:var(--color-border-primary)}
+.kanban-card-title{font-size:13px;font-weight:500;margin-bottom:6px;line-height:1.3}
+.kanban-card-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500}
+.badge-draft{background:#F1EFE8;color:#5F5E5A}
+.badge-script{background:#E6F1FB;color:#185FA5}
+.badge-film{background:#FAEEDA;color:#854F0B}
+.badge-edit{background:#EEEDFE;color:#534AB7}
+.badge-ready{background:#EAF3DE;color:#3B6D11}
+.badge-posted{background:#E1F5EE;color:#0F6E56}
+.card-date{font-size:10px;color:var(--color-text-secondary)}
+
+/* KANBAN COL STATUS DOTS */
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+.dot-draft{background:#888780}.dot-script{background:#378ADD}.dot-film{background:#EF9F27}.dot-edit{background:#7F77DD}.dot-ready{background:#639922}.dot-posted{background:#1D9E75}
+
+/* FEED */
+.feed-layout{display:grid;grid-template-columns:1fr 380px;gap:20px}
+.feed-grid-wrap{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.feed-grid-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.feed-grid-title{font-size:13px;font-weight:500}
+.feed-hint{font-size:11px;color:var(--color-text-secondary)}
+.ig-profile{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.ig-avatar{width:42px;height:42px;border-radius:50%;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
+.ig-username{font-size:14px;font-weight:500}
+.ig-sub{font-size:12px;color:var(--color-text-secondary)}
+.feed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.feed-cell{aspect-ratio:3/4;background:var(--color-background-secondary);position:relative;overflow:hidden;cursor:grab;border:2px solid transparent;transition:border-color .1s}
+.feed-cell.drag-over{border-color:var(--color-text-primary)}
+.feed-cell.dragging{opacity:.4}
+.feed-cell img{width:100%;height:100%;object-fit:cover;pointer-events:none}
+.feed-cell-empty{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--color-text-tertiary)}
+.feed-cell-num{position:absolute;top:4px;left:5px;font-size:10px;font-weight:500;color:white;background:rgba(0,0,0,.4);padding:1px 5px;border-radius:3px}
+.feed-cell-status{position:absolute;bottom:4px;right:4px;font-size:9px;padding:2px 5px;border-radius:3px;font-weight:500}
+.feed-cell-reorder{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.5);color:white;border-radius:4px;padding:4px 8px;font-size:10px;opacity:0;transition:opacity .15s;pointer-events:none}
+.feed-cell:hover .feed-cell-reorder{opacity:1}
+.feed-sidebar{display:flex;flex-direction:column;gap:12px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);width:100%;max-width:520px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary);position:sticky;top:0;background:var(--color-background-primary)}
+.modal-title{font-size:14px;font-weight:500}
+.modal-close{background:transparent;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:18px;padding:2px 6px;border-radius:4px}
+.modal-close:hover{background:var(--color-background-secondary)}
+.modal-body{padding:20px;display:flex;flex-direction:column;gap:14px}
+.field-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:5px;display:block}
+.field-input{width:100%;padding:8px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);font-family:var(--font-sans)}
+.field-input:focus{outline:none;border-color:var(--color-border-primary)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{padding:14px 20px;border-top:0.5px solid var(--color-border-tertiary);display:flex;justify-content:flex-end;gap:8px}
+.btn-ghost{padding:7px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;font-size:13px;cursor:pointer;color:var(--color-text-primary)}
+.btn-primary{padding:7px 14px;border:none;border-radius:var(--border-radius-md);background:var(--color-text-primary);color:var(--color-background-primary);font-size:13px;cursor:pointer;font-family:var(--font-sans)}
+.upload-zone{border:1px dashed var(--color-border-secondary);border-radius:var(--border-radius-md);padding:16px;text-align:center;cursor:pointer;transition:background .15s}
+.upload-zone:hover{background:var(--color-background-secondary)}
+.upload-zone-text{font-size:12px;color:var(--color-text-secondary)}
+.upload-preview{width:60px;height:80px;object-fit:cover;border-radius:4px;border:0.5px solid var(--color-border-tertiary)}
+.upload-previews{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.delete-btn{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--color-text-primary);color:var(--color-background-primary);border:none;cursor:pointer;font-size:9px;display:flex;align-items:center;justify-content:center}
+.upload-item{position:relative;display:inline-block}
+
+/* STATUS COLORS FOR CALENDAR */
+.ev-draft{background:#F1EFE8;color:#5F5E5A}
+.ev-script{background:#E6F1FB;color:#185FA5}
+.ev-film{background:#FAEEDA;color:#854F0B}
+.ev-edit{background:#EEEDFE;color:#534AB7}
+.ev-ready{background:#EAF3DE;color:#3B6D11}
+.ev-posted{background:#E1F5EE;color:#0F6E56}
+
+.cat-pill{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:0.5px solid var(--color-border-tertiary)}
+
+.empty-state{text-align:center;padding:32px 16px;color:var(--color-text-tertiary);font-size:13px}
+
+.detail-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px}
+.detail-card-title{font-size:12px;font-weight:500;margin-bottom:10px;color:var(--color-text-secondary)}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px}
+.detail-row:last-child{border-bottom:none}
+.detail-row-label{color:var(--color-text-secondary)}
+.progress-bar{height:3px;background:var(--color-background-secondary);border-radius:2px;margin-top:8px;overflow:hidden}
+.progress-fill{height:100%;background:var(--color-text-primary);border-radius:2px;transition:width .3s}
+</style>
+
+<h2 class="sr-only">Instagram content planning dashboard with calendar, kanban, and feed preview views</h2>
+
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-title">content planner</div>
+    <div class="topbar-tabs">
+      <button class="tab active" onclick="switchTab('calendar')">calendar</button>
+      <button class="tab" onclick="switchTab('kanban')">kanban</button>
+      <button class="tab" onclick="switchTab('feed')">feed preview</button>
+    </div>
+    <button class="add-btn" onclick="openModal()">+ new post</button>
+  </div>
+
+  <div id="panel-calendar" class="panel active"><div id="cal-root"></div></div>
+  <div id="panel-kanban" class="panel"><div id="kanban-root"></div></div>
+  <div id="panel-feed" class="panel"><div id="feed-root"></div></div>
+</div>
+
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="handleOverlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">new post</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <label class="field-label">title</label>
+        <input class="field-input" id="f-title" placeholder="Post title..." />
+      </div>
+      <div class="field-row">
+        <div>
+          <label class="field-label">category</label>
+          <select class="field-input" id="f-category">
+            <option>Talking Head</option><option>Carousel</option><option>Photo</option>
+            <option>Portfolio</option><option>Trends</option><option>Cinematic</option><option>Others</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label">status</label>
+          <select class="field-input" id="f-status">
+            <option value="draft">Draft</option><option value="script">Script</option>
+            <option value="film">Film</option><option value="edit">Edit</option>
+            <option value="ready">Ready</option><option value="posted">Posted</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label class="field-label">post date</label>
+          <input class="field-input" id="f-date" type="date" />
+        </div>
+        <div>
+          <label class="field-label">time</label>
+          <input class="field-input" id="f-time" type="time" value="09:00" />
+        </div>
+      </div>
+      <div>
+        <label class="field-label">objective</label>
+        <input class="field-input" id="f-objective" placeholder="e.g. grow reach, build authority..." />
+      </div>
+      <div>
+        <label class="field-label">reference link</label>
+        <input class="field-input" id="f-ref" placeholder="https://..." />
+      </div>
+      <div>
+        <label class="field-label">posted link</label>
+        <input class="field-input" id="f-posted-link" placeholder="https://instagram.com/p/..." />
+      </div>
+      <div>
+        <label class="field-label">caption / notes</label>
+        <textarea class="field-input" id="f-caption" rows="3" placeholder="Caption or notes..."></textarea>
+      </div>
+      <div>
+        <label class="field-label">photos / cover</label>
+        <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+          <div class="upload-zone-text">click to upload images (3:4 ratio recommended)</div>
+        </div>
+        <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleFileUpload(event)" />
+        <div class="upload-previews" id="upload-previews"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">cancel</button>
+      <button class="btn-primary" onclick="savePost()" id="save-btn">save post</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let posts = [];
+let editingId = null;
+let currentTab = 'calendar';
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let dragSrcIdx = null;
+let feedOrder = [];
+let tempImages = [];
+
+const STATUSES = ['draft','script','film','edit','ready','posted'];
+const STATUS_LABELS = {draft:'Draft',script:'Script',film:'Film',edit:'Edit',ready:'Ready',posted:'Posted'};
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+function switchTab(t){
+  currentTab=t;
+  document.querySelectorAll('.tab').forEach((el,i)=>{
+    el.classList.toggle('active',['calendar','kanban','feed'][i]===t);
+  });
+  document.querySelectorAll('.panel').forEach(el=>el.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  render();
+}
+
+function openModal(id){
+  editingId=id||null;
+  tempImages=[];
+  document.getElementById('upload-previews').innerHTML='';
+  document.getElementById('modal-title').textContent=id?'edit post':'new post';
+  if(id){
+    const p=posts.find(x=>x.id===id);
+    if(p){
+      document.getElementById('f-title').value=p.title||'';
+      document.getElementById('f-category').value=p.category||'Talking Head';
+      document.getElementById('f-status').value=p.status||'draft';
+      document.getElementById('f-date').value=p.date||'';
+      document.getElementById('f-time').value=p.time||'09:00';
+      document.getElementById('f-objective').value=p.objective||'';
+      document.getElementById('f-ref').value=p.ref||'';
+      document.getElementById('f-posted-link').value=p.postedLink||'';
+      document.getElementById('f-caption').value=p.caption||'';
+      if(p.images&&p.images.length){
+        tempImages=[...p.images];
+        renderUploadPreviews();
+      }
+    }
+  } else {
+    document.getElementById('f-title').value='';
+    document.getElementById('f-category').value='Talking Head';
+    document.getElementById('f-status').value='draft';
+    document.getElementById('f-date').value='';
+    document.getElementById('f-time').value='09:00';
+    document.getElementById('f-objective').value='';
+    document.getElementById('f-ref').value='';
+    document.getElementById('f-posted-link').value='';
+    document.getElementById('f-caption').value='';
+  }
+  document.getElementById('modal-overlay').style.display='flex';
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').style.display='none';
+  editingId=null;tempImages=[];
+}
+
+function handleOverlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+
+function handleFileUpload(e){
+  const files=Array.from(e.target.files);
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{tempImages.push(ev.target.result);renderUploadPreviews();};
+    r.readAsDataURL(f);
+  });
+  e.target.value='';
+}
+
+function renderUploadPreviews(){
+  const c=document.getElementById('upload-previews');
+  c.innerHTML=tempImages.map((src,i)=>`<div class="upload-item"><img src="${src}" class="upload-preview"/><button class="delete-btn" onclick="removeImg(${i})">×</button></div>`).join('');
+}
+
+function removeImg(i){tempImages.splice(i,1);renderUploadPreviews();}
+
+function savePost(){
+  const title=document.getElementById('f-title').value.trim();
+  if(!title){document.getElementById('f-title').focus();return;}
+  const post={
+    id:editingId||uid(),
+    title,
+    category:document.getElementById('f-category').value,
+    status:document.getElementById('f-status').value,
+    date:document.getElementById('f-date').value,
+    time:document.getElementById('f-time').value,
+    objective:document.getElementById('f-objective').value,
+    ref:document.getElementById('f-ref').value,
+    postedLink:document.getElementById('f-posted-link').value,
+    caption:document.getElementById('f-caption').value,
+    images:tempImages.length?[...tempImages]:[]
+  };
+  if(editingId){
+    const idx=posts.findIndex(x=>x.id===editingId);
+    if(idx>-1)posts[idx]=post;
+  } else {
+    posts.push(post);
+    feedOrder.push(post.id);
+  }
+  closeModal();render();
+}
+
+function deletePost(id){
+  posts=posts.filter(x=>x.id!==id);
+  feedOrder=feedOrder.filter(x=>x!==id);
+  render();
+}
+
+function statusClass(s){return 'badge-'+s;}
+function statusEvClass(s){return 'ev-'+s;}
+function statusDotClass(s){return 'dot-'+s;}
+
+function render(){
+  if(currentTab==='calendar')renderCalendar();
+  else if(currentTab==='kanban')renderKanban();
+  else renderFeed();
+}
+
+function renderCalendar(){
+  const root=document.getElementById('cal-root');
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const prevDays=new Date(calYear,calMonth,0).getDate();
+  const today=new Date();
+
+  let cells='';
+  const totalCells=Math.ceil((firstDay+daysInMonth)/7)*7;
+  for(let i=0;i<totalCells;i++){
+    let day,isOther=false,isToday=false;
+    if(i<firstDay){day=prevDays-firstDay+i+1;isOther=true;}
+    else if(i>=firstDay+daysInMonth){day=i-firstDay-daysInMonth+1;isOther=true;}
+    else{day=i-firstDay+1;}
+    const y=isOther?(i<firstDay?calYear+(calMonth===0?-1:0):calYear+(calMonth===11?1:0)):calYear;
+    const m=isOther?(i<firstDay?(calMonth===0?11:calMonth-1):(calMonth===11?0:calMonth+1)):calMonth;
+    const dateStr=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    if(!isOther&&day===today.getDate()&&calMonth===today.getMonth()&&calYear===today.getFullYear())isToday=true;
+    const dayPosts=posts.filter(p=>p.date===dateStr);
+    const eventsHtml=dayPosts.map(p=>`<div class="cal-event ${statusEvClass(p.status)}" onclick="event.stopPropagation();openModal('${p.id}')" title="${p.title}">${p.title}</div>`).join('');
+    const dateLbl=isToday?`<div class="cal-date"><div style="background:var(--color-text-primary);color:var(--color-background-primary);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500">${day}</div></div>`:`<div class="cal-date" style="${isOther?'color:var(--color-text-tertiary)':''}">${day}</div>`;
+    cells+=`<div class="cal-cell${isOther?' other-month':''}" onclick="openModal()">${dateLbl}${eventsHtml}</div>`;
+  }
+
+  root.innerHTML=`
+    <div class="cal-header">
+      <button class="cal-nav" onclick="calNav(-1)">← prev</button>
+      <span class="cal-month">${MONTHS[calMonth]} ${calYear}</span>
+      <button class="cal-nav" onclick="calNav(1)">next →</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-days-header">${DAYS.map(d=>`<div class="cal-day-name">${d}</div>`).join('')}</div>
+      <div class="cal-body">${cells}</div>
+    </div>`;
+}
+
+function calNav(dir){
+  calMonth+=dir;
+  if(calMonth<0){calMonth=11;calYear--;}
+  if(calMonth>11){calMonth=0;calYear++;}
+  renderCalendar();
+}
+
+function renderKanban(){
+  const root=document.getElementById('kanban-root');
+  root.innerHTML=`<div class="kanban">${STATUSES.map(s=>{
+    const sp=posts.filter(p=>p.status===s);
+    return `<div class="kanban-col">
+      <div class="kanban-col-header">
+        <span class="kanban-col-title"><span class="status-dot ${statusDotClass(s)}"></span>${STATUS_LABELS[s]}</span>
+        <span class="kanban-count">${sp.length}</span>
+      </div>
+      ${sp.length?sp.map(p=>`
+        <div class="kanban-card" onclick="openModal('${p.id}')">
+          ${p.images&&p.images[0]?`<div style="width:100%;height:80px;border-radius:6px;overflow:hidden;margin-bottom:8px"><img src="${p.images[0]}" style="width:100%;height:100%;object-fit:cover"/></div>`:''}
+          <div class="kanban-card-title">${p.title}</div>
+          <div class="kanban-card-meta">
+            <span class="cat-pill">${p.category}</span>
+            ${p.date?`<span class="card-date">${p.date}</span>`:''}
+          </div>
+        </div>`).join(''):`<div class="empty-state">no posts</div>`}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderFeed(){
+  const root=document.getElementById('feed-root');
+  const validOrdered=feedOrder.filter(id=>posts.find(p=>p.id===id));
+  posts.forEach(p=>{if(!feedOrder.includes(p.id))feedOrder.push(p.id);});
+  const ordered=feedOrder.filter(id=>posts.find(p=>p.id===id));
+  const grid12=ordered.slice(0,12);
+  while(grid12.length<12)grid12.push(null);
+
+  const statCounts={};
+  STATUSES.forEach(s=>statCounts[s]=posts.filter(p=>p.status===s).length);
+  const total=posts.length;
+  const postedPct=total?Math.round(statCounts.posted/total*100):0;
+
+  root.innerHTML=`<div class="feed-layout">
+    <div class="feed-grid-wrap">
+      <div class="ig-profile">
+        <div class="ig-avatar">👤</div>
+        <div><div class="ig-username">your feed</div><div class="ig-sub">${total} post${total!==1?'s':''} planned</div></div>
+      </div>
+      <div class="feed-grid-header">
+        <span class="feed-grid-title">feed grid — 12 slots (4×3)</span>
+        <span class="feed-hint">drag to reorder</span>
+      </div>
+      <div class="feed-grid" id="feed-grid">
+        ${grid12.map((id,i)=>{
+          const p=id?posts.find(x=>x.id===id):null;
+          const img=p&&p.images&&p.images[0];
+          return `<div class="feed-cell" draggable="${!!p}" data-idx="${i}" 
+            ondragstart="dragStart(event,${i})" 
+            ondragover="dragOver(event,${i})" 
+            ondrop="dragDrop(event,${i})"
+            ondragleave="dragLeave(event)"
+            onclick="${p?`openModal('${p.id}')`:''}"
+            style="cursor:${p?'grab':'default'}">
+            ${p?`<span class="feed-cell-num">${i+1}</span>`:''}
+            ${img?`<img src="${img}" />`:`<div class="feed-cell-empty">${p?'📄':''}</div>`}
+            ${p?`<span class="feed-cell-status badge ${statusClass(p.status)}">${STATUS_LABELS[p.status]}</span>`:''}
+            ${p?`<div class="feed-cell-reorder">drag</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="feed-sidebar">
+      <div class="detail-card">
+        <div class="detail-card-title">progress overview</div>
+        ${STATUSES.map(s=>`<div class="detail-row"><span class="detail-row-label">${STATUS_LABELS[s]}</span><span class="badge ${statusClass(s)}">${statCounts[s]}</span></div>`).join('')}
+        <div class="progress-bar" style="margin-top:12px"><div class="progress-fill" style="width:${postedPct}%"></div></div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:5px">${postedPct}% posted (${statCounts.posted}/${total})</div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-card-title">by category</div>
+        ${['Talking Head','Carousel','Photo','Portfolio','Trends','Cinematic','Others'].map(c=>{
+          const n=posts.filter(p=>p.category===c).length;
+          return n?`<div class="detail-row"><span class="detail-row-label">${c}</span><span style="font-size:12px;font-weight:500">${n}</span></div>`:'';
+        }).join('')||'<div style="font-size:12px;color:var(--color-text-tertiary)">no posts yet</div>'}
+      </div>
+      ${posts.filter(p=>p.status==='ready').length?`<div class="detail-card">
+        <div class="detail-card-title">ready to post</div>
+        ${posts.filter(p=>p.status==='ready').map(p=>`
+          <div class="detail-row" style="cursor:pointer" onclick="openModal('${p.id}')">
+            <span class="detail-row-label">${p.title}</span>
+            <span style="font-size:11px;color:var(--color-text-secondary)">${p.date||'no date'}</span>
+          </div>`).join('')}
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+function dragStart(e,idx){
+  if(!feedOrder[idx]&&!posts.find(p=>p.id===feedOrder[idx]))return;
+  dragSrcIdx=idx;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+}
+
+function dragOver(e,idx){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  document.querySelectorAll('.feed-cell').forEach((el,i)=>{
+    el.classList.toggle('drag-over',i===idx&&idx!==dragSrcIdx);
+  });
+}
+
+function dragLeave(e){e.currentTarget.classList.remove('drag-over');}
+
+function dragDrop(e,toIdx){
+  e.preventDefault();
+  document.querySelectorAll('.feed-cell').forEach(el=>{el.classList.remove('drag-over','dragging');});
+  if(dragSrcIdx===null||dragSrcIdx===toIdx){dragSrcIdx=null;return;}
+  const src=feedOrder[dragSrcIdx];
+  const dst=feedOrder[toIdx];
+  feedOrder[dragSrcIdx]=dst||null;
+  feedOrder[toIdx]=src||null;
+  feedOrder=feedOrder.filter(Boolean);
+  dragSrcIdx=null;
+  renderFeed();
+}
+
+render();
+</script>
