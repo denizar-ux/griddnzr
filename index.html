@@ -553,9 +553,12 @@ function dbSaveUser(u) {
 
 function dbLoadAll() {
   onSupaReady(function() {
+    var deleted=[];
+    try{ deleted=JSON.parse(localStorage.getItem('gig_deleted_ids')||'[]'); }catch(e){}
     supa.from('grid_users').select('*').then(function(res) {
       if (res.error || !res.data || !res.data.length) return;
       res.data.forEach(function(row) {
+        if(deleted.indexOf(row.id)>=0) return;
         var existing = state.users.find(function(u){ return u.id===row.id; });
         if (existing) {
           existing.images = row.images || [];
@@ -584,6 +587,9 @@ function subscribeRealtime() {
         function(payload) {
           var row = payload.new;
           if (!row || !row.id) return;
+          var deleted=[];
+          try{ deleted=JSON.parse(localStorage.getItem('gig_deleted_ids')||'[]'); }catch(e){}
+          if(deleted.indexOf(row.id)>=0) return;
           var u = state.users.find(function(u){ return u.id===row.id; });
           if (!u) {
             state.users.push({id:row.id, name:row.name, color:row.color, images:row.images||[]});
@@ -999,10 +1005,15 @@ function delUser(id) {
   if(!confirm('Hapus profil ini?')) return;
   state.users=state.users.filter(function(u){ return u.id!==id; });
   try{ localStorage.removeItem('gig_sb_imgs_'+id); }catch(e){}
+  try{
+    var deleted=JSON.parse(localStorage.getItem('gig_deleted_ids')||'[]');
+    if(deleted.indexOf(id)<0){ deleted.push(id); }
+    localStorage.setItem('gig_deleted_ids',JSON.stringify(deleted));
+  }catch(e){}
   onSupaReady(function(){
     supa.from('grid_users').delete().eq('id',id).catch(function(){});
   });
-  if(state.currentUser===id) state.currentUser=state.users[0].id;
+  if(state.currentUser===id) state.currentUser=state.users.length?state.users[0].id:null;
   LS.save(); renderUserModal(); render();
 }
 
