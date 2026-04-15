@@ -487,29 +487,19 @@ function syncDot(status) {
 var LS = {
   save: function() {
     try {
-      var lite = state.users.map(function(u){ return {id:u.id,name:u.name,color:u.color}; });
-      localStorage.setItem('gig_sb_users', JSON.stringify(lite));
       localStorage.setItem('gig_sb_cur',   state.currentUser||'');
       localStorage.setItem('gig_sb_theme', state.theme);
     } catch(e) {}
   },
-  saveImgs: function(userId, imgs) {
-    try { localStorage.setItem('gig_sb_imgs_'+userId, JSON.stringify(imgs)); } catch(e) {}
-  },
+  saveImgs: function(userId, imgs) { /* stored in Supabase */ },
   load: function() {
     try {
       var t = localStorage.getItem('gig_sb_theme'); if (t) state.theme = t;
-      var raw = JSON.parse(localStorage.getItem('gig_sb_users')||'[]');
-      state.users = raw.map(function(u) {
-        var imgs = [];
-        try { imgs = JSON.parse(localStorage.getItem('gig_sb_imgs_'+u.id)||'[]'); } catch(e) {}
-        return {id:u.id, name:u.name, color:u.color, images:imgs};
-      });
-      var c = localStorage.getItem('gig_sb_cur');
-      if (c && state.users.find(function(u){ return u.id===c; })) state.currentUser = c;
-      else if (state.users.length) state.currentUser = state.users[0].id;
-      if (!state.users.length) initDefault();
-    } catch(e) { initDefault(); }
+      state.currentUser = localStorage.getItem('gig_sb_cur') || null;
+      state.users = [];
+      // bersihkan data lama
+      localStorage.removeItem('gig_sb_users');
+    } catch(e) {}
   }
 };
 
@@ -553,24 +543,31 @@ function dbSaveUser(u) {
 
 function dbLoadAll() {
   onSupaReady(function() {
-    var deleted=[];
-    try{ deleted=JSON.parse(localStorage.getItem('gig_deleted_ids')||'[]'); }catch(e){}
     supa.from('grid_users').select('*').then(function(res) {
-      if (res.error || !res.data || !res.data.length) return;
-      res.data.forEach(function(row) {
-        if(deleted.indexOf(row.id)>=0) return;
-        var existing = state.users.find(function(u){ return u.id===row.id; });
-        if (existing) {
-          existing.images = row.images || [];
-          existing.name   = row.name;
-          existing.color  = row.color;
-          LS.saveImgs(row.id, existing.images);
-        } else {
-          state.users.push({id:row.id, name:row.name, color:row.color, images:row.images||[]});
-          LS.saveImgs(row.id, row.images||[]);
-        }
+      if (res.error) {
+        console.error('dbLoadAll error:', JSON.stringify(res.error));
+        openUserModal();
+        return;
+      }
+      if (!res.data || !res.data.length) {
+        state.users = [];
+        state.currentUser = null;
+        render();
+        openUserModal();
+        return;
+      }
+      // replace state dari Supabase
+      state.users = res.data.map(function(row) {
+        return {id:row.id, name:row.name, color:row.color, images:row.images||[]};
       });
-      LS.save();
+      // restore currentUser dari localStorage jika masih valid
+      var saved = localStorage.getItem('gig_sb_cur');
+      if (saved && state.users.find(function(u){ return u.id===saved; })) {
+        state.currentUser = saved;
+      } else {
+        state.currentUser = state.users[0].id;
+        LS.save();
+      }
       render();
     });
   });
@@ -585,11 +582,16 @@ function subscribeRealtime() {
       .on('postgres_changes',
         { event:'*', schema:'public', table:'grid_users' },
         function(payload) {
-          var row = payload.new;
+          var row = payload.new || payload.old;
           if (!row || !row.id) return;
-          var deleted=[];
-          try{ deleted=JSON.parse(localStorage.getItem('gig_deleted_ids')||'[]'); }catch(e){}
-          if(deleted.indexOf(row.id)>=0) return;
+          if(payload.eventType === 'DELETE'){
+            state.users = state.users.filter(function(u){ return u.id!==row.id; });
+            if(state.currentUser===row.id){
+              state.currentUser = state.users.length ? state.users[0].id : null;
+              LS.save();
+            }
+            renderUserModal(); render(); return;
+          }
           var u = state.users.find(function(u){ return u.id===row.id; });
           if (!u) {
             state.users.push({id:row.id, name:row.name, color:row.color, images:row.images||[]});
@@ -998,23 +1000,32 @@ function addUser() {
   dbSaveUser(u);
   LS.save(); inp.value='';
   switchUser(u.id); renderUserModal();
+  showToast('Profil @'+u.name+' dibuat');
 }
 
 function delUser(id) {
   if(state.users.length<=1) return;
   if(!confirm('Hapus profil ini?')) return;
-  state.users=state.users.filter(function(u){ return u.id!==id; });
-  try{ localStorage.removeItem('gig_sb_imgs_'+id); }catch(e){}
-  try{
-    var deleted=JSON.parse(localStorage.getItem('gig_deleted_ids')||'[]');
-    if(deleted.indexOf(id)<0){ deleted.push(id); }
-    localStorage.setItem('gig_deleted_ids',JSON.stringify(deleted));
-  }catch(e){}
+  // update UI dulu
+  state.users = state.users.filter(function(u){ return u.id!==id; });
+  if(state.currentUser===id){
+    state.currentUser = state.users.length ? state.users[0].id : null;
+  }
+  LS.save();
+  renderUserModal();
+  render();
+  // hapus dari Supabase
   onSupaReady(function(){
-    supa.from('grid_users').delete().eq('id',id).catch(function(){});
+    supa.from('grid_users').delete().eq('id',id).then(function(res){
+      if(res.error){
+        console.error('delUser error:', JSON.stringify(res.error));
+        showToast('Gagal hapus: '+res.error.message);
+        dbLoadAll(); // rollback
+      } else {
+        showToast('Profil dihapus');
+      }
+    });
   });
-  if(state.currentUser===id) state.currentUser=state.users.length?state.users[0].id:null;
-  LS.save(); renderUserModal(); render();
 }
 
 // ══════════════════════════════════════
@@ -1063,7 +1074,6 @@ LS.load();
 document.documentElement.setAttribute('data-theme', state.theme);
 document.getElementById('theme-btn').textContent = state.theme==='dark'?'☾':'☀';
 render();
-if (!state.users.length) openUserModal();
 // initSupabaseSync() dipanggil setelah SDK load (di _loadScript callback)
 
 </script>
