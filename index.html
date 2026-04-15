@@ -514,8 +514,6 @@ var LS = {
 };
 
 function initDefault() {
-  var u = makeUser('vandenizar');
-  state.currentUser = u.id;
   LS.save();
 }
 
@@ -1054,6 +1052,7 @@ LS.load();
 document.documentElement.setAttribute('data-theme', state.theme);
 document.getElementById('theme-btn').textContent = state.theme==='dark'?'☾':'☀';
 render();
+if (!state.users.length) openUserModal();
 // initSupabaseSync() dipanggil setelah SDK load (di _loadScript callback)
 
 </script>
